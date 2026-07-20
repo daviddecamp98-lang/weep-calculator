@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daylight Weep Calculator</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #0f172a;
+    }
+
+    p.subtitle {
+      font-size: 0.9rem;
+      color: #64748b;
+      margin-bottom: 1.5rem;
+    }
+
+    .section {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 0.4rem;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .input-with-mic {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .mic-btn {
+      background-color: #e2e8f0;
+      color: #334155;
+      border: none;
+      width: 45px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: all 0.2s;
+    }
+
+    .mic-btn:hover {
+      background-color: #cbd5e1;
+    }
+
+    .mic-btn.listening {
+      background-color: #ef4444;
+      color: white;
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 1; }
+      to { opacity: 0.6; }
+    }
+
+    button.calc-btn {
+      width: 100%;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.8rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button.calc-btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .results {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .results.active {
+      display: block;
+    }
+
+    .result-card {
+      background: #f1f5f9;
+      border-left: 4px solid var(--primary);
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 0 6px 6px 0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.95rem;
+    }
+
+    .result-card span.value {
+      font-weight: 700;
+      font-family: monospace;
+      font-size: 1.05rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Daylight Weep Calculator</h1>
+    <p class="subtitle">Calculate left and right weep locations instantly using touch or voice.</p>
+
+    <!-- Configuration -->
+    <div class="section">
+      <div class="grid-2">
+        <div>
+          <label for="weepPreset">Weep Location Offset</label>
+          <select id="weepPreset" onchange="handlePresetChange()">
+            <option value="4.0">4" Cover (4.0")</option>
+            <option value="2.0">2" PP (2.0")</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div>
+          <label for="weepOffset">Offset Value (in)</label>
+          <input type="number" id="weepOffset" value="4.0" step="0.125" disabled>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label for="mullionWidth">Mullion Width (in)</label>
+          <input type="number" id="mullionWidth" value="2.5" step="0.125">
+        </div>
+        <div>
+          <label for="numDaylights">Number of Daylights</label>
+          <input type="number" id="numDaylights" value="3" min="2" onchange="generateInputs()" oninput="generateInputs()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Dynamic Inputs with Voice Activation -->
+    <div class="section">
+      <label for="firstVal">Distance: End of Pressure Plate to Daylight 1 (in)</label>
+      <div class="input-with-mic">
+        <input type="number" id="firstVal" value="0.0" step="0.125">
+        <button type="button" class="mic-btn" onclick="startVoiceInput('firstVal', this)" title="Voice Input">🎙️</button>
+      </div>
+
+      <div id="daylightInputs"></div>
+    </div>
+
+    <button type="button" class="calc-btn" onclick="calculateWeeps()">Calculate Weeps</button>
+
+    <!-- Results Section -->
+    <div id="results" class="results">
+      <h2 style="font-size: 1.2rem; margin-bottom: 1rem; margin-top: 1.5rem;">Results</h2>
+      <div id="resultsList"></div>
+    </div>
+  </div>
+
+  <script>
+    function handlePresetChange() {
+      const preset = document.getElementById('weepPreset').value;
+      const offsetInput = document.getElementById('weepOffset');
+      
+      if (preset === 'custom') {
+        offsetInput.disabled = false;
+      } else {
+        offsetInput.value = preset;
+        offsetInput.disabled = true;
+      }
+    }
+
+    function generateInputs() {
+      const numInput = document.getElementById('numDaylights');
+      const num = parseInt(numInput ? numInput.value : 3) || 2;
+      const container = document.getElementById('daylightInputs');
+      if (!container) return;
+      
+      container.innerHTML = '';
+
+      for (let i = 1; i <= num; i++) {
+        const div = document.createElement('div');
+        div.innerHTML = `
+          <label for="daylight_${i}">Value for Daylight ${i} (in)</label>
+          <div class="input-with-mic">
+            <input type="number" id="daylight_${i}" value="0.0" step="0.125">
+            <button type="button" class="mic-btn" onclick="startVoiceInput('daylight_${i}', this)" title="Voice Input">🎙️</button>
+          </div>
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    function startVoiceInput(inputId, btnElement) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        alert("Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.");
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+
+      recognition.onstart = function() {
+        btnElement.classList.add('listening');
+      };
+
+      recognition.onend = function() {
+        btnElement.classList.remove('listening');
+      };
+
+      recognition.onerror = function(event) {
+        btnElement.classList.remove('listening');
+        alert("Voice recognition error: " + event.error);
+      };
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript.trim();
+        const parsedNumber = parseFloat(transcript.replace(/[^0-9.]/g, ''));
+
+        if (!isNaN(parsedNumber)) {
+          document.getElementById(inputId).value = parsedNumber;
+        } else {
+          alert(`Could not parse a valid number from "${transcript}". Please try again.`);
+        }
+      };
+
+      recognition.start();
+    }
+
+    function calculateWeeps() {
+      const weepOffset = parseFloat(document.getElementById('weepOffset').value) || 0;
+      const mullionWidth = parseFloat(document.getElementById('mullionWidth').value) || 0;
+      const numDaylights = parseInt(document.getElementById('numDaylights').value) || 2;
+      
+      const firstVal = parseFloat(document.getElementById('firstVal').value) || 0;
+
+      let values = [firstVal];
+      for (let i = 1; i <= numDaylights; i++) {
+        const inputElem = document.getElementById(`daylight_${i}`);
+        const val = inputElem ? (parseFloat(inputElem.value) || 0) : 0;
+        values.push(val);
+      }
+
+      const resultsList = document.getElementById('resultsList');
+      resultsList.innerHTML = '';
+
+      const leftWeepJump = (weepOffset * 2) + mullionWidth;
+
+      // Daylight 1 Left Weep
+      let ans = values[0] + weepOffset;
+      addResultCard("Daylight 1 Left Weep", ans);
+
+      // Daylight 1 Right Weep
+      ans = ans + values[1] - (weepOffset * 2);
+      addResultCard("Daylight 1 Right Weep", ans);
+
+      // Daylights 2 through N
+      for (let d = 2; d <= numDaylights; d++) {
+        // Left Weep
+        ans = ans + leftWeepJump;
+        addResultCard(`Daylight ${d} Left Weep`, ans);
+
+        // Right Weep
+        ans = ans - (weepOffset * 2) + values[d];
+        addResultCard(`Daylight ${d} Right Weep`, ans);
+      }
+
+      document.getElementById('results').classList.add('active');
+    }
+
+    function addResultCard(label, val) {
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `
+        <span>${label}</span>
+        <span class="value">${val.toFixed(3)}"</span>
+      `;
+      document.getElementById('resultsList').appendChild(card);
+    }
+
+    // Safely run after page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      generateInputs();
+    });
+  </script>
+</body>
+</html>
